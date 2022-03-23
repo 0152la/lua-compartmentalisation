@@ -1,0 +1,6 @@
+third_party/
+
+*.swp
+*.vim
+
+up.sh
