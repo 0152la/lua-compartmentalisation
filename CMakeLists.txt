@@ -5,15 +5,15 @@ set(TEST_DIR ${CMAKE_SOURCE_DIR}/tests)
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 
-set(LUA_DIR ${CMAKE_SOURCE_DIR}/third_party/lua-5.4.4)
+set(LUA_DIR ${CMAKE_SOURCE_DIR}/third_party/lua)
 set(LUA_INSTALL_DIR ${LUA_DIR}/install)
 
 # Build lua
-add_custom_target(
-    lua
-    COMMAND make && make local
-    WORKING_DIRECTORY ${LUA_DIR}
-)
+#add_custom_target(
+    #lua
+    #COMMAND make && make local
+    #WORKING_DIRECTORY ${LUA_DIR}
+#)
 
-add_subdirectory(tests)
-
+add_subdirectory(${SRC_DIR})
+add_subdirectory(${TEST_DIR})

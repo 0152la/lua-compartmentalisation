@@ -1,6 +1,6 @@
 #include "hello_world_elf.h"
 
-#define printf my_printf
+//#define printf my_printf
 
 static const char my_str[13] = "Hello World!";
 
@@ -19,8 +19,10 @@ do_print_args(const char* arg_string)
 int
 main()
 {
-    printf("My String is %s.\n", my_str);
     do_print();
-    do_print_args(my_str);
     return 0;
+    /*printf("My String is %s.\n", my_str);*/
+    /*do_print();*/
+    /*do_print_args(my_str);*/
+    /*return 0;*/
 }
