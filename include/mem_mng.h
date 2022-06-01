@@ -8,9 +8,13 @@
 
 #include <cheriintrin.h>
 
+#include "compartment.h"
+
 #define COMP_MEM_DDC_OFFSET -16
 #define COMP_BIG_DDC_OFFSET -32
 #define COMP_STK_OFFSET     -48
+
+struct Compartment;
 
 struct mem_alloc
 {
@@ -24,12 +28,8 @@ struct mem_alloc
 extern size_t comp_mem_alloc;
 extern size_t comp_mem_max;
 
-void* my_realloc(void*, size_t);
-void* my_malloc(size_t);
-void my_free(void* ptr);
-
-//void manager_register_mem_alloc(void*, size_t);
-//void manager_insert_new_alloc(struct Compartment*, struct mem_alloc*);
-//size_t manager_free_mem_alloc(void*);
+void* manager_register_mem_alloc(struct Compartment*, size_t);
+void manager_insert_new_alloc(struct Compartment*, struct mem_alloc*);
+size_t manager_free_mem_alloc(struct Compartment*, void*);
 
 #endif // MEM_MNG_H

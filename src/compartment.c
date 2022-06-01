@@ -17,6 +17,7 @@ comp_init()
     new_comp->phdr = 0;
     new_comp->alloc_head = NULL;
     new_comp->curr_intercept_count = 0;
+    new_comp->ddc = NULL;
     return new_comp;
 }
 
@@ -237,8 +238,18 @@ comp_from_elf(char* filename)
     }
     /*assert(found == to_find);*/
 
+    comp_register_ddc(new_comp);
     comp_print(new_comp);
     return new_comp;
+}
+
+void
+comp_register_ddc(struct Compartment* new_comp)
+{
+    void* __capability new_ddc = cheri_address_set(manager_ddc, new_comp->base);
+    new_ddc = cheri_bounds_set(new_ddc, new_comp->size + new_comp->scratch_mem_size + new_comp->scratch_mem_stack_size);
+    // TODO bounds
+    new_comp->ddc = new_ddc;
 }
 
 void
@@ -352,6 +363,7 @@ comp_map_full(struct Compartment* to_map)
 }
 
 void ddc_set(void *__capability cap) {
+    assert(cap != NULL);
     asm volatile("MSR DDC, %[cap]" : : [cap] "C"(cap) : "memory");
 }
 
@@ -360,27 +372,32 @@ comp_exec(struct Compartment* to_exec)
 {
     void* fn = (void*) to_exec->entry_point;
     void* wrap_sp;
-#if __has_feature(capabilities)
-    void* __capability wrap_ddc = cheri_ddc_get();
-    void* __capability comp_ddc = cheri_address_set(wrap_ddc, to_exec->base);
-    ddc_set(comp_ddc);
-#endif
 
     setup_stack(to_exec);
 
     int64_t result;
 
+/*#if __has_feature(capabilities)*/
+    /*ddc_set(to_exec->ddc);*/
+/*#endif*/
+
     // TODO handle register clobbering stuff (`syscall-restrict` example)
     // https://github.com/capablevms/cheri_compartments/blob/master/code/signal_break.c#L46
 #if defined ARM
     asm("str lr, [sp, #-16]!\n\t"
-        /*"mov %[wrap_sp], sp\n\t"*/
+        "mov sp, %[comp_sp]\n\t"
+        "ldr c0, %[comp_ddc]\n\t"
+        "msr DDC, c0\n\t"
         "blr %[fn]\n\t"
-        /*"mov sp, %[wrap_sp]\n\t"*/
+        "ldr c1, %[manager_ddc]\n\t"
+        "msr DDC, c1\n\t" // TODO should fail
+        "ldr x1, %[wrap_sp]\n\t"
+        "mov sp, x1\n\t"
         "ldr lr, [sp], #16\n\t"
         "mov %[result], x0"
-         : /*[wrap_sp]"+rm"(wrap_sp)*/ [result]"+r"(result)
-         : [fn]"r"(fn)
+         : [wrap_sp]"+m"(wrap_sp), [result]"+r"(result)
+         : [fn]"r"(fn), [comp_sp]"r"(to_exec->stack_pointer),
+           [manager_ddc]"m"(manager_ddc), [comp_ddc]"m"(to_exec->ddc)
          : "memory");
 #elif defined(X86)
     asm("jmp *%[fn]"
@@ -390,9 +407,9 @@ comp_exec(struct Compartment* to_exec)
 #else
     assert(false);
 #endif
-#if __has_feature(capabilities)
-    ddc_set(wrap_ddc);
-#endif
+/*#if __has_feature(capabilities)*/
+    /*ddc_set(manager_ddc);*/
+/*#endif*/
     // TODO reset SP
     return result;
 }
@@ -441,6 +458,7 @@ setup_stack(struct Compartment* to_setup)
 {
     assert(to_setup->stack_pointer % 16 == 0);
 
+    uintptr_t init_sp = to_setup->stack_pointer;
     uintptr_t argv_ptrs[to_setup->argc];
     for (size_t i = 0; i < to_setup->argc; ++i)
     {
@@ -457,7 +475,6 @@ setup_stack(struct Compartment* to_setup)
         envp_ptrs[i] = to_setup->stack_pointer;
     }
 
-    void* init_sp = (void*) to_setup->stack_pointer;
     size_t stack_push_size = (1 + 1 + 1 + sizeof(envp_ptrs) + sizeof(argv_ptrs)) * sizeof(uint64_t);
     void* null_delim = NULL;
     /* argc */
@@ -486,6 +503,8 @@ setup_stack(struct Compartment* to_setup)
     /*comp_stack_auxval_push(to_setup, AT_SECURE, 0);*/
     /*comp_stack_auxval_push(to_setup, AT_RANDOM, rand());*/
     comp_stack_auxval_push(to_setup, AT_NULL, 0);
+
+    to_setup->stack_pointer = init_sp;
 
 }
 

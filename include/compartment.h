@@ -22,6 +22,8 @@
 
 #define SEG_MAX_COUNT 20
 
+struct func_intercept;
+
 struct intercept_patch
 {
     int* patch_addr;
@@ -51,6 +53,7 @@ struct Compartment
     Elf64_Half phdr;
     Elf64_Half phentsize;
     Elf64_Half phnum;
+    void* __capability ddc;
     // ELF data
     size_t size;
     uintptr_t base;
@@ -83,6 +86,7 @@ extern struct Compartment** comps;
 
 struct Compartment* comp_init();
 struct Compartment* comp_from_elf(char*);
+void comp_register_ddc(struct Compartment*);
 void comp_add_intercept(struct Compartment*, uintptr_t, struct func_intercept);
 void comp_stack_push(struct Compartment*, const void*, size_t);
 void comp_map(struct Compartment*);

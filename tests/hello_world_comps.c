@@ -1,5 +1,7 @@
-#include "compartment.h"
+#include "manager.h"
 #include "limits.h"
+
+extern struct Compartment* loaded_comp;
 
 char*
 get_full_path(char* path)
@@ -13,6 +15,7 @@ get_full_path(char* path)
 int
 main(int argc, char** argv)
 {
+    manager_ddc = cheri_ddc_get();
     time_t t_buf;
     time(&t_buf);
     assert(argc == 2);
